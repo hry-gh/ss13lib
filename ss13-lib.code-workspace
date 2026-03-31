@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "dmsrc"
+		},
+		{
+			"name": "root",
+			"path": "."
+		}
+	],
+	"settings": {
+		"dreammaker.reparseOnSave": true,
+		"terminal.integrated.cwd": "${workspaceFolder:root}"
+	}
+}
