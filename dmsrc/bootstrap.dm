@@ -1,5 +1,9 @@
 /// Gets SS13Lib or creates it if this is the first time we're accessing it
 /world/proc/get_or_init_ss13lib()
+#ifdef SPACEMAN_DMM
+	RETURN_TYPE(/datum/ss13lib)
+#endif
+
 	var/static/datum/ss13lib/lib
 	if(!lib)
 		lib = new
