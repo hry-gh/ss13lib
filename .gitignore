@@ -1,0 +1,10 @@
+*.dmb
+*.rsc
+*.lk
+
+tests/.hub.log
+tests/.dd_stdout.log
+tests/.dd_stderr.log
+tests/.hub_stdout.log
+tests/.test_hub_config.toml
+tests/testgame.log

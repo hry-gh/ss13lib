@@ -1,0 +1,74 @@
+name: Integration Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration_test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ss13hub
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: ss13hub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout ss13hub
+        uses: actions/checkout@v4
+        with:
+          repository: hry-gh/ss13hub
+          path: ss13hub
+
+      - name: Restore BYOND from cache
+        uses: ./.github/actions/restore_or_install_byond
+
+      - name: Install BYOND 32-bit dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y -o APT::Immediate-Configure=false libstdc++6:i386 zlib1g:i386
+
+      - name: Restore Rust toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+            ss13hub/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('ss13hub/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build ss13hub
+        working-directory: ss13hub
+        run: cargo build
+
+      - name: Apply database migrations
+        run: psql "$DATABASE_URL" -f ss13hub/migrations/001_initial_schema.sql
+        env:
+          DATABASE_URL: postgres://ss13hub:testpassword@localhost:5432/ss13hub
+
+      - name: Run integration tests
+        run: |
+          source $HOME/BYOND/byond/bin/byondsetup
+          python3 tests/run_integration_test.py
+        env:
+          SS13HUB_DIR: ${{ github.workspace }}/ss13hub
+          DATABASE_URL: postgres://ss13hub:testpassword@localhost:5432/ss13hub

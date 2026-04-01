@@ -1,0 +1,40 @@
+name: Restore or Install BYOND
+description: Attempts to restore a specified BYOND version from cache; if not, installs it.
+
+runs:
+  using: composite
+  steps:
+    - name: Set BYOND version
+      shell: bash
+      run: |
+        echo "BYOND_MAJOR=516" >> $GITHUB_ENV
+        echo "BYOND_MINOR=1677" >> $GITHUB_ENV
+    - name: Restore BYOND cache
+      id: restore_byond_cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/BYOND
+        key: ${{ runner.os }}-byond-${{ env.BYOND_MAJOR }}-${{ env.BYOND_MINOR }}
+    - name: Install BYOND
+      if: ${{ !steps.restore_byond_cache.outputs.cache-hit }}
+      shell: bash
+      run: |
+        echo "Setting up BYOND ${BYOND_MAJOR}.${BYOND_MINOR} (linux)..."
+        rm -rf "$HOME/BYOND"
+        mkdir -p "$HOME/BYOND"
+        cd "$HOME/BYOND"
+        curl -f "http://www.byond.com/download/build/${BYOND_MAJOR}/${BYOND_MAJOR}.${BYOND_MINOR}_byond_linux.zip" -o byond.zip \
+          || curl -f "https://byond-builds.dm-lang.org/${BYOND_MAJOR}/${BYOND_MAJOR}.${BYOND_MINOR}_byond_linux.zip" -o byond.zip \
+          || { echo "Failed to download BYOND from all mirrors"; exit 1; }
+        unzip -qt byond.zip || { echo "Downloaded zip is corrupt"; exit 1; }
+        unzip byond.zip
+        rm byond.zip
+        cd byond
+        make here
+        echo "${BYOND_MAJOR}.${BYOND_MINOR}" > "$HOME/BYOND/version.txt"
+    - name: Save BYOND cache
+      if: ${{ !steps.restore_byond_cache.outputs.cache-hit }}
+      uses: actions/cache/save@v4
+      with:
+        path: ~/BYOND
+        key: ${{ steps.restore_byond_cache.outputs.cache-primary-key }}

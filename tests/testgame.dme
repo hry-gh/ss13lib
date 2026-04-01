@@ -1,0 +1,37 @@
+#define SS13LIB_EXTERNAL_CONFIGURATION
+
+#define SS13LIB_HUB_SERVER "http://localhost:3000/api/server"
+
+#define SS13LIB_PLAYER_COUNT global.client_count
+#define SS13LIB_SERVER_DISPLAY_NAME "My Awesome Server"
+#define SS13LIB_SERVER_LANGUAGE "en"
+
+#define SS13LIB_INFO_LOG(X) world.log << "\[SS13LIB\] [X]"
+#define SS13LIB_WARNING_LOG(X) world.log << "\[SS13LIB WARN\] [X]"
+#define SS13LIB_ERROR_LOG(X) world.log << "\[SS13LIB ERROR\] [X]"
+
+#define SS13LIB_GUESTS_BANNED FALSE
+
+#include "../ss13lib.dm"
+
+var/global/client_count = 0
+
+/client/New(T)
+	SS13LIB_CLIENT
+
+	..()
+
+	global.client_count++
+
+/client/Del()
+	..()
+
+	global.client_count--
+
+/world/Topic(T)
+	SS13LIB_TOPIC
+
+/world/IsBanned(key, address, computer_id, type)
+	SS13LIB_ISBANNED
+
+#include "../dmsrc/ss13lib.dme"
