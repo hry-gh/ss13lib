@@ -169,7 +169,7 @@ def compile_game():
 def start_dreamdaemon() -> subprocess.Popen:
     section(f"Starting DreamDaemon on port {GAME_PORT}")
     proc = subprocess.Popen(
-        ["DreamDaemon", "testgame.dmb", str(GAME_PORT), "-trusted", "-close", "-logself"],
+        ["DreamDaemon", "testgame.dmb", str(GAME_PORT), "-ports", "1-65535", "-trusted", "-close", "-logself"],
         cwd=SCRIPT_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     processes.append(proc)
