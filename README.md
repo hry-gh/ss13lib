@@ -9,6 +9,44 @@ A drop in library for [Space Station 13](https://spacestation13.com) servers to 
 3. In your .dme, add ss13lib.dm as *early* as possible and ss13lib.dme as *late* as possible.
 4. Carry out the configuration steps per ss13lib.dm, placing any external configuration *before* ss13lib.dm in your .dme.
 
+### Minimal Implementation
+
+```dm
+//! In some file before ss13lib.dm, ie, ss13lib.config.dm:
+#define SS13LIB_EXTERNAL_CONFIGURATION
+
+#define SS13LIB_PLAYER_COUNT length(client_count) // length(GLOB.clients)
+#define SS13LIB_SERVER_DISPLAY_NAME "My Awesome Server"
+#define SS13LIB_SERVER_LANGUAGE "en" // en
+
+#define SS13LIB_INFO_LOG(X) world.log << X
+#define SS13LIB_WARNING_LOG(X) world.log << X
+#define SS13LIB_ERROR_LOG(X) world.log << X
+
+#define SS13LIB_GUESTS_BANNED FALSE
+
+//! Anywhere else...
+var/global/client_count = 0
+
+/client/New(T)
+	SS13LIB_CLIENT
+
+	..()
+
+	global.client_count++
+
+/client/Del()
+	..()
+
+	global.client_count--
+
+/world/Topic(T)
+	SS13LIB_TOPIC
+
+/world/IsBanned(key, address, computer_id, type)
+	SS13LIB_ISBANNED
+```
+
 ## Flows
 
 ```mermaid
@@ -48,4 +86,3 @@ sequenceDiagram
 	- handshake
 	- authentication
 	- topic
-- Trial integrations into actual codebases
