@@ -1,6 +1,6 @@
-# <img alt="Code docs" width="32px" src="public/ss13.png"> SS13Lib
+# <img alt="SS13 Logo" width="32px" src="public/ss13.png"> SS13Lib
 
-A drop in library for [Space Station 13](https://spacestation13.com) servers to integrate, allowing for authentication and discoverability on the SS13 Launcher, via the SS13Hub backend.
+A drop in library for [Space Station 13](https://spacestation13.com) servers to integrate, allowing for authentication and discoverability on the SS13 Launcher, via the [SS13Hub](https://github.com/hry-gh/ss13hub) backend.
 
 ## Integration Guide
 
