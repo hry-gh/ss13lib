@@ -1,5 +1,3 @@
-#define SS13LIB_DEBUG
-
 #ifdef SS13LIB_DEBUG
 
 #warn SS13LIB_DEBUG must not be set in production.
