@@ -44,6 +44,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y -o APT::Immediate-Configure=false libc6-i386 libstdc++6:i386 libgcc-s1:i386 zlib1g:i386 libcurl4:i386
 
+      - name: Install Wine and Xvfb
+        run: |
+          sudo apt-get install -y wine64 wine32 xvfb
+
+      - name: Install Windows BYOND (for DreamSeeker)
+        run: |
+          mkdir -p "$HOME/BYOND-win"
+          cd "$HOME/BYOND-win"
+          curl -f "http://www.byond.com/download/build/${BYOND_MAJOR}/${BYOND_MAJOR}.${BYOND_MINOR}_byond.zip" -o byond-win.zip \
+            || curl -f "https://byond-builds.dm-lang.org/${BYOND_MAJOR}/${BYOND_MAJOR}.${BYOND_MINOR}_byond.zip" -o byond-win.zip \
+            || { echo "Failed to download Windows BYOND"; exit 1; }
+          unzip byond-win.zip
+          rm byond-win.zip
+
       - name: Restore Rust toolchain cache
         uses: actions/cache@v4
         with:
@@ -67,3 +81,4 @@ jobs:
         env:
           SS13HUB_DIR: ${{ github.workspace }}/ss13hub
           DATABASE_URL: postgres://ss13hub:testpassword@localhost:5432/ss13hub
+          DREAMSEEKER_EXE: /home/runner/BYOND-win/byond/bin/dreamseeker.exe

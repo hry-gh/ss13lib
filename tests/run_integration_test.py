@@ -16,6 +16,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 HUB_DIR = os.environ.get("SS13HUB_DIR", os.path.join(PROJECT_DIR, "ss13hub"))
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgres://ss13hub:testpassword@localhost:5432/ss13hub")
+DREAMSEEKER_EXE = os.environ.get("DREAMSEEKER_EXE")
 CI = os.environ.get("CI") == "true"
 
 processes: list[subprocess.Popen] = []
@@ -91,7 +92,20 @@ def port_open(host: str, port: int) -> bool:
         return False
 
 
-# ── Start SS13Hub ────────────────────────────────────────────────────
+def hub_api(method: str, path: str, body: dict | None = None, token: str | None = None) -> dict | None:
+    url = f"http://127.0.0.1:{HUB_PORT}{path}"
+    data = json.dumps(body).encode() if body else None
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"SS13Auth {token}"
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        log(f"Hub API {method} {path} returned {e.code}: {e.read().decode()}")
+        return None
+
 
 def start_hub() -> subprocess.Popen:
     section("Starting SS13Hub")
@@ -148,8 +162,6 @@ ip_retention_days = 14
     return proc
 
 
-# ── Compile & start DreamDaemon ──────────────────────────────────────
-
 def compile_game():
     section("Compiling test game")
     result = subprocess.run(
@@ -184,9 +196,6 @@ def start_dreamdaemon() -> subprocess.Popen:
 
     end_section()
     return proc
-
-
-# ── Tests ────────────────────────────────────────────────────────────
 
 def test_handshake(dd: subprocess.Popen) -> str | None:
     section("Test: Handshake")
@@ -275,8 +284,70 @@ def test_topic_poll(server_id: str):
         passed(f"Topic response contains required fields ({', '.join(required_fields)})")
     end_section()
 
+def test_client_auth(server_id: str):
+    if not DREAMSEEKER_EXE:
+        log("DREAMSEEKER_EXE not set, skipping auth test")
+        return
 
-# ── Main ─────────────────────────────────────────────────────────────
+    section("Test: Client authentication")
+
+    reg = hub_api("POST", "/api/auth/register", {
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "testpassword123",
+    })
+    if not reg:
+        fail("Failed to register test user")
+        end_section()
+        return
+    log(f"Registered user: {reg['user_id']}")
+
+    login = hub_api("POST", "/api/auth/login", {
+        "username_or_email": "testuser",
+        "password": "testpassword123",
+    })
+    if not login:
+        fail("Failed to log in")
+        end_section()
+        return
+    token = login["token"]
+    log("Logged in, got session token")
+
+    join = hub_api("POST", "/api/session/join", {
+        "server_ip": "127.0.0.1",
+        "server_port": GAME_PORT,
+    }, token=token)
+    if not join:
+        fail("Failed to get auth ticket from /api/session/join")
+        end_section()
+        return
+    auth_ticket = join["auth_ticket"]
+    log("Got auth ticket")
+
+    connect_url = f"byond://127.0.0.1:{GAME_PORT}?auth_ticket={auth_ticket}"
+    ds_proc = subprocess.Popen(
+        ["xvfb-run", "-a", "wine", DREAMSEEKER_EXE, connect_url],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    processes.append(ds_proc)
+    log(f"DreamSeeker launched (PID {ds_proc.pid})")
+
+    def ticket_consumed():
+        row = psql(
+            "SELECT consumed FROM auth_tickets "
+            f"WHERE ticket = '{auth_ticket}';"
+        )
+        return row == "t"
+
+    if wait_for("auth ticket to be consumed", ticket_consumed, timeout=30):
+        passed("Auth ticket was consumed — client authenticated successfully")
+    else:
+        log("Game log:")
+        log(read_log(os.path.join(SCRIPT_DIR, "testgame.log")))
+
+    ds_proc.terminate()
+    end_section()
+
 
 def main():
     try:
@@ -288,6 +359,7 @@ def main():
         if server_id:
             test_heartbeat(server_id)
             test_topic_poll(server_id)
+            test_client_auth(server_id)
 
         section("Game log")
         print(read_log(os.path.join(SCRIPT_DIR, "testgame.log")))
