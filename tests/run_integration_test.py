@@ -16,6 +16,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 HUB_DIR = os.environ.get("SS13HUB_DIR", os.path.join(PROJECT_DIR, "ss13hub"))
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgres://ss13hub:testpassword@localhost:5432/ss13hub")
+CI = os.environ.get("CI") == "true"
 
 processes: list[subprocess.Popen] = []
 failed = False
@@ -26,7 +27,15 @@ def log(msg: str):
 
 
 def section(title: str):
-    print(f"\n── {title} ──", flush=True)
+    if CI:
+        print(f"::group::{title}", flush=True)
+    else:
+        print(f"\n── {title} ──", flush=True)
+
+
+def end_section():
+    if CI:
+        print("::endgroup::", flush=True)
 
 
 def passed(msg: str):
@@ -36,7 +45,7 @@ def passed(msg: str):
 def fail(msg: str):
     global failed
     failed = True
-    print(f"  FAIL: {msg}", file=sys.stderr, flush=True)
+    print(f"::error::{msg}" if CI else f"  FAIL: {msg}", file=sys.stderr, flush=True)
 
 
 def cleanup():
@@ -131,9 +140,11 @@ ip_retention_days = 14
     if not wait_for("hub to be ready", hub_ready, timeout=15, interval=0.5):
         log("Hub logs:")
         log(read_log(hub_log_path))
+        end_section()
         sys.exit(1)
 
     log("Hub is ready.")
+    end_section()
     return proc
 
 
@@ -149,8 +160,10 @@ def compile_game():
         log(result.stdout)
         log(result.stderr)
         fail("Compilation failed")
+        end_section()
         sys.exit(1)
     passed("Compilation succeeded")
+    end_section()
 
 
 def start_dreamdaemon() -> subprocess.Popen:
@@ -161,6 +174,7 @@ def start_dreamdaemon() -> subprocess.Popen:
     )
     processes.append(proc)
     log(f"DreamDaemon started (PID {proc.pid})")
+    end_section()
     return proc
 
 
@@ -182,6 +196,7 @@ def test_handshake(dd: subprocess.Popen) -> str | None:
     if not row:
         log("Hub logs:")
         log(read_log(os.path.join(SCRIPT_DIR, ".hub.log")))
+        end_section()
         return None
 
     server_id, address, port, active = row.split("|")
@@ -192,9 +207,11 @@ def test_handshake(dd: subprocess.Popen) -> str | None:
 
     if active != "t":
         fail("Server not marked active")
+        end_section()
         return None
 
     passed("Server registered and active after handshake")
+    end_section()
     return server_id
 
 
@@ -207,9 +224,11 @@ def test_heartbeat(server_id: str):
     )
     if recent != "1":
         fail("Heartbeat timestamp not recent")
+        end_section()
         return
 
     passed("Server heartbeat is recent")
+    end_section()
 
 
 def test_topic_poll(server_id: str):
@@ -231,6 +250,7 @@ def test_topic_poll(server_id: str):
     if not row:
         log("Hub logs:")
         log(read_log(os.path.join(SCRIPT_DIR, ".hub.log")))
+        end_section()
         return
 
     status_json, last_update = row.split("|")
@@ -245,6 +265,7 @@ def test_topic_poll(server_id: str):
         fail(f"Topic response missing required fields: {missing}")
     else:
         passed(f"Topic response contains required fields ({', '.join(required_fields)})")
+    end_section()
 
 
 # ── Main ─────────────────────────────────────────────────────────────
@@ -262,11 +283,13 @@ def main():
 
         section("Game log")
         print(read_log(os.path.join(SCRIPT_DIR, "testgame.log")))
+        end_section()
 
         if failed:
             section("Hub log")
             print(read_log(os.path.join(SCRIPT_DIR, ".hub.log")))
-            print("\n  Some tests failed.", file=sys.stderr)
+            end_section()
+            print("::error::Some tests failed." if CI else "\n  Some tests failed.", file=sys.stderr)
             sys.exit(1)
         else:
             print("\n  All integration tests passed.")
