@@ -174,6 +174,14 @@ def start_dreamdaemon() -> subprocess.Popen:
     )
     processes.append(proc)
     log(f"DreamDaemon started (PID {proc.pid})")
+
+    if wait_for("DreamDaemon to listen on port", lambda: port_open("127.0.0.1", GAME_PORT), timeout=15, interval=0.5):
+        passed(f"DreamDaemon is listening on port {GAME_PORT}")
+        result = subprocess.run(["ss", "-tlnp", f"sport = :{GAME_PORT}"], capture_output=True, text=True)
+        log(f"Socket info:\n{result.stdout}")
+    else:
+        fail(f"DreamDaemon never started listening on port {GAME_PORT}")
+
     end_section()
     return proc
 
