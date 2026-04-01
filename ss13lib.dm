@@ -5,10 +5,13 @@
 #define SS13LIB world.get_or_init_ss13lib()
 
 /// Consumers must add this to **the top** of /client/New, before any setup is performed on a client.
-#define SS13LIB_CLIENT var/ss13lib_client_return = SS13LIB.handle_client(src, args[2]); if (ss13lib_client_return) return ss13lib_client_return
+#define SS13LIB_CLIENT var/ss13lib_client_return = SS13LIB.handle_client(src, args[1]); if (ss13lib_client_return) return ss13lib_client_return
 
-/// Consumer must call this as early as possible in /world/Topic
+/// Consumers must call this as early as possible in /world/Topic
 #define SS13LIB_TOPIC var/ss13lib_topic_return = SS13LIB.handle_topic(args[1]); if(ss13lib_topic_return) return ss13lib_topic_return
+
+/// Consumers must call this at the start of /client/IsBanned()
+#define SS13LIB_ISBANNED var/ss13lib_ban_return = SS13LIB.handle_banned(args[1], args[2], args[3]); if(!isnull(ss13lib_ban_return)) return ss13lib_ban_return
 
 //! CONFIGURATION
 
@@ -18,8 +21,8 @@
 /// Consumers SHOULD create this define if you want to do SS13Lib configuration outside of this file.
 #ifndef SS13LIB_EXTERNAL_CONFIGURATION
 
-#error SS13Lib unconfigured, either comment this define if you are including configuration directly in ss13lib.dm
-#error or #define SS13LIB_EXTERNAL_CONFIGURATION where you have configured SS13Lib
+// #error SS13Lib unconfigured, either uncomment this error if you are including configuration directly in ss13lib.dm
+// #error or #define SS13LIB_EXTERNAL_CONFIGURATION where you have configured SS13Lib
 
 //! HUB CONFIGURATION
 
@@ -70,6 +73,13 @@
 
 //! LIBRARY CONFIGURATION
 
-#define SS13LIB_LOG(X) // log_debug(X)
+#define SS13LIB_INFO_LOG(X) // log_debug(X)
+#define SS13LIB_WARNING_LOG(X) // log_debug(X)
+#define SS13LIB_ERROR_LOG(X) // log_debug(X)
+
+/// If guests are allowed to connect. SS13Lib allows Guest connections, however,
+/// if this resolves to a truthy value, they will be disconnected if they cannot
+/// authenticate themselves via SS13Hub
+#define SS13LIB_GUESTS_BANNED // CONFIG_GET(flag/guestban)
 
 #endif

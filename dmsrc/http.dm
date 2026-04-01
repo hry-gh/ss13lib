@@ -6,15 +6,13 @@
 #if defined(SS13LIB_HTTP_FIRE_AND_FORGET)
 	SS13LIB_HTTP_FIRE_AND_FORGET(method, url, data)
 #elif defined(rustg_http_request_fire_and_forget)
-	rustg_http_request_fire_and_forget(method, url, data, list())
+	rustg_http_request_fire_and_forget(method, url, data, json_encode(data))
 #elif DM_VERSION >= 516 && DM_BUILD >= 1664
 	world.Export(url, data, 0, null, method)
 #else
-	/*
 	#error Either `rustg_http_request_fire_and_forget` must be available, or 516.1664 must be in use.
 	#error If your codebase has a custom HTTP implementation, it can be provided using
 	#error #define SS13LIB_HTTP_FIRE_AND_FORGET(method, url, data)
-	*/
 #endif
 
 /datum/ss13lib_http_response
@@ -33,36 +31,46 @@
 #if defined(SS13LIB_HTTP_ASYNC)
 	response = SS13LIB_HTTP_ASYNC(method, url, data)
 
+	// The `data` field sent to rust-g will *always* be JSON-encoded here and put in the body.
 #elif defined(rustg_http_request_async) && defined(rustg_http_check_request) && defined(RUSTG_JOB_NO_RESULTS_YET)
-	var/identifier = rustg_http_request_async(method, url, data)
+	var/identifier = rustg_http_request_async(method, url, json_encode(data))
 	var/raw = rustg_http_check_request(identifier)
-	while(response == RUSTG_JOB_NO_RESULTS_YET)
+	while(raw == RUSTG_JOB_NO_RESULTS_YET)
 		sleep(world.tick_lag)
+		raw = rustg_http_check_request(identifier)
 
 	response = new
 
 	try
-		var/decoded = json_decode(_raw_response)
+		var/decoded = json_decode(raw)
 		response.status_code = decoded["status_code"]
 		response.body = decoded["body"]
 	catch
 		response.errored = TRUE
 
+	// The `data` field sent via world.Export is as an associative list, and will be received
+	// as a form body. This avoids having to write to the file system here, but means the
+	// consuming server must allow for both form body and JSON body input
 #elif DM_VERSION >= 516 && DM_BUILD >= 1664
 	var/raw = world.Export(url, data, 0, null, method)
 
-	response = new
-	response.status_code = text2num(copytext(raw["STATUS"], 1, 4))
-	response.body = file2text(raw["CONTENT"])
 
-	if(response.status_code == 0)
+
+	response = new
+
+	if(!raw)
 		response.errored = TRUE
+	else
+		response.status_code = text2num(copytext(raw["STATUS"], 1, 4))
+		response.body = file2text(raw["CONTENT"])
+
+		if(response.status_code == 0)
+			response.errored = TRUE
+
 #else
-	/*
 	#error Either `rustg_http_request_async` must be available, or 516.1664 must be in use.
 	#error If your codebase has a custom HTTP implementation, it can be provided using
 	#error #define SS13LIB_HTTP_ASYNC(method, url, data), returning a /datum/ss13lib_http_response
-	*/
 #endif
 
 	return response

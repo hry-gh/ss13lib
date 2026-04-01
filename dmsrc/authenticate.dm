@@ -4,10 +4,10 @@
 /// authticket in the event of a DreamSeeker reconnection
 /datum/ss13lib/proc/handle_client(client/new_client, connection_params)
 	var/params_list = params2list(connection_params)
-	var/auth_ticket = topic_params["auth_ticket"]
+	var/auth_ticket = params_list["auth_ticket"]
 
-	var/launcher_port = topic_params["launcher_port"]
-	var/launcher_key = topic_params["launcher_key"]
+	var/launcher_port = params_list["launcher_port"]
+	var/launcher_key = params_list["launcher_key"]
 
 	var/static/connection_to_launcher = list()
 	if(launcher_port && launcher_key)
@@ -20,21 +20,36 @@
 		var/datum/ss13lib_auth_response/response = check_auth_ticket(auth_ticket)
 
 		if(response)
+			var/is_banned = world.IsBanned(response.ckey_to_use, new_client.address, new_client.computer_id)
+			if(is_banned)
+				// TODO: provide more feedback to gamecode-banned users
+				del(new_client)
+				// No further work to occur in /client/New(), this user is gone.
+				return TRUE
+
 			new_client.ckey = response.ckey_to_use
+			// The ckey has now been set appropriately, so /client/New() can continue uninterrupted.
 			return FALSE
-		else
-			SS13LIB_LOG("Failed to authenticate user via SS13Hub.")
-			// TODO: handling here
+
+		SS13LIB_WARNING_LOG("Failed to authenticate user via SS13Hub.")
+
+		// TODO: provide more feedback to Guest-banned users
+		if(SS13LIB_GUESTS_BANNED)
+			del(new_client)
+			// No further work to occur in /client/New(), this user is gone.
+			return TRUE
 
 	var/stored_launcher_details = connection_to_launcher["[new_client.address]+[new_client.computer_id]"]
 	if(stored_launcher_details)
 		var/mob/ss13lib_holder_mob/mob = new(null, stored_launcher_details)
 		return mob
 
-	// TODO: handle where authentication has failed but a user is still a guest
-	// maybe a hook to see if they should be disconnected?
-	// like if guest_ban is enabled
+	// TODO: provide more feedback to Guest-banned users
+	if(SS13LIB_GUESTS_BANNED)
+		del(new_client)
+		return TRUE
 
+	// No handling required for this user, already authenticated via BYOND
 	return FALSE
 
 /datum/ss13lib_auth_response
@@ -42,17 +57,21 @@
 	var/username
 
 /datum/ss13lib/proc/check_auth_ticket(auth_ticket) as /datum/ss13lib_auth_response
+	if(!src.server_id)
+		SS13LIB_ERROR_LOG("No server ID from successful handshake, cannot validate auth ticket.")
+		return FALSE
+
 	var/datum/ss13lib_http_response/response = perform_http_request(
-		SS13LIB_HTTP_GET,
+		SS13LIB_HTTP_POST,
 		"[SS13LIB_HUB_SERVER]/authenticate",
-		list(
+		json_encode(list(
 			"auth_ticket" = auth_ticket,
 			"server_id" = src.server_id
-		)
+		))
 	)
 
 	if(!response || response.errored)
-		SS13LIB_LOG("Failed to communicate with authentication server.")
+		SS13LIB_ERROR_LOG("Failed to communicate with authentication server.")
 		return FALSE
 
 	var/decoded
@@ -60,15 +79,15 @@
 	try
 		decoded = json_decode(response.body)
 	catch(exception/decode_error)
-		SS13LIB_LOG("Failed to decode JSON response from server: [decode_error.name]")
+		SS13LIB_ERROR_LOG("Failed to decode JSON response from server: [decode_error.name]")
 		return FALSE
 
 	if(!decoded || !length(decoded))
-		SS13LIB_LOG("Failed to parse JSON response from server.")
+		SS13LIB_ERROR_LOG("Failed to parse JSON response from server.")
 		return FALSE
 
 	if(!decoded["ckey_to_use"] || !decoded["username"])
-		SS13LIB_LOG("Server responded with an invalid result.")
+		SS13LIB_ERROR_LOG("Server responded with an invalid result.")
 		return FALSE
 
 	var/datum/ss13lib_auth_response/auth = new
@@ -121,12 +140,12 @@
 </html>
 	"}
 
-	var/html = replacetext(basehtml, "%LAUNCHER_PORT%", stored_launcher_details["port"])
-	html = replacetext(basehtml, "%LAUNCHER_KEY", "\"[stored_launcher_details["key"]]\"")
-	html = replacetext(basehtml, "%MOB_REFERENCE", "\"\ref[src]\"")
+	var/html = replacetext(basehtml, "%LAUNCHER_PORT%", json_encode(stored_launcher_details["port"]))
+	html = replacetext(html, "%LAUNCHER_KEY%", json_encode(stored_launcher_details["key"]))
+	html = replacetext(html, "%MOB_REFERENCE%", json_encode("\ref[src]"))
 
-	src << browse(html_to_send, "window=launcher-browser,size=1x1,titlebar=0,can_resize=0")
-	winset(controlling, "launcher-browser", "is-visible=false")
+	src << browse(html, "window=launcher-browser,size=1x1,titlebar=0,can_resize=0")
+	winset(client, "launcher-browser", "is-visible=false")
 
 /mob/ss13lib_holder_mob/Topic(href, href_list)
 	if(usr != src)
@@ -143,18 +162,22 @@
 	try
 		returned = json_decode(body)
 	catch
-		SS13LIB_LOG("Failed to decode JSON in Topic response from user.")
+		SS13LIB_WARNING_LOG("Failed to decode JSON in Topic response from user.")
 
 	if(!returned)
 		return
 
 	var/auth_ticket = returned["auth_ticket"]
 	if(!auth_ticket)
-		SS13LIB_LOG("Invalid response in Topic response from user.")
+		SS13LIB_WARNING_LOG("Invalid response in Topic response from user.")
 		return
 
 	var/client/authenticating_client = client
 	client.mob = null
+
+	// We have to re-enter here to properly go through the consumers client Initialization flow
+	// which should have been fully interrupted by early returning the mob we are currently in
+	// assuming this has been integrated properly and we are at the **top** of /client/New
 	client.New(list2params(
 		list("auth_ticket" = auth_ticket)
 	))

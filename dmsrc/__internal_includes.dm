@@ -14,6 +14,18 @@
 #define SS13LIB_HTTP_POST "POST"
 #endif
 
-#ifndef SS13LIB_LOG
-#define SS13LIB_LOG(x)
+#ifndef SS13LIB_INFO_LOG
+#define SS13LIB_INFO_LOG(x)
+#endif
+
+#ifndef SS13LIB_WARNING_LOG
+#define SS13LIB_WARNING_LOG(x)
+#endif
+
+#ifndef SS13LIB_ERROR_LOG
+#define SS13LIB_ERROR_LOG(x)
+#endif
+
+#ifndef SS13LIB_QUERY_CODE
+#define SS13LIB_QUERY_CODE "ss13hub"
 #endif

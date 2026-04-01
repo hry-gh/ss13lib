@@ -8,12 +8,15 @@
 
 #ifndef SS13LIB_INIT_HANDLER
 /// If the codebase doesn't start us up, start us up ourselves.
+/// /static/ variables within procs are initialised early within global init order,
+/// so we can begin handshaking with the hub server as early as possible
 /world/proc/___ss13lib_init()
 	var/static/_ = SS13LIB
 #endif
 
 /datum/ss13lib/New()
-	perform_handshake()
+	if(!perform_handshake())
+		return FALSE // unrecoverable error for SS13Lib, cannot communicate with SS13Hub
 
 #ifndef SS13LIB_HEARTBEAT_HANDLER
 /// Only perform any work here if we're set up to do so.
