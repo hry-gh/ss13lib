@@ -15,7 +15,7 @@ A drop in library for [Space Station 13](https://spacestation13.com) servers to 
 //! In some file before ss13lib.dm, ie, ss13lib.config.dm:
 #define SS13LIB_EXTERNAL_CONFIGURATION
 
-#define SS13LIB_PLAYER_COUNT length(client_count)
+#define SS13LIB_PLAYER_COUNT global.client_count
 #define SS13LIB_SERVER_DISPLAY_NAME "My Awesome Server"
 #define SS13LIB_SERVER_LANGUAGE "en" // en
 
