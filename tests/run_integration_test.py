@@ -325,9 +325,11 @@ def test_client_auth(server_id: str):
     log("Got auth ticket")
 
     connect_url = f"byond://127.0.0.1:{GAME_PORT}?auth_ticket={auth_ticket}"
+    ds_log_path = os.path.join(SCRIPT_DIR, ".dreamseeker.log")
+    ds_log = open(ds_log_path, "w")
     ds_proc = subprocess.Popen(
         ["xvfb-run", "-a", "wine", DREAMSEEKER_EXE, connect_url],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdout=ds_log, stderr=subprocess.STDOUT,
     )
     processes.append(ds_proc)
     log(f"DreamSeeker launched (PID {ds_proc.pid})")
@@ -342,6 +344,8 @@ def test_client_auth(server_id: str):
     if wait_for("auth ticket to be consumed", ticket_consumed, timeout=30):
         passed("Auth ticket was consumed — client authenticated successfully")
     else:
+        log("DreamSeeker/Wine log:")
+        log(read_log(ds_log_path))
         log("Game log:")
         log(read_log(os.path.join(SCRIPT_DIR, "testgame.log")))
 
