@@ -46,7 +46,11 @@ jobs:
 
       - name: Install Wine and Xvfb
         run: |
-          sudo apt-get install -y wine64 wine32 xvfb
+          sudo apt-get install -y wine64 wine32 xvfb winetricks
+
+      - name: Install Wine VC++ runtime
+        run: |
+          xvfb-run -a winetricks -q vcrun2015
 
       - name: Restore Windows BYOND cache
         id: restore_byond_win_cache
