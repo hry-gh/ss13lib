@@ -54,6 +54,14 @@
 /// Mandatory field
 #define SS13LIB_SERVER_LANGUAGE // en
 
+/// What BYOND client version players should use to connect.
+/// Optional field - if not defined, the launcher will use its default
+#define SS13LIB_CLIENT_VERSION // world.byond_version
+
+/// What BYOND client build players should use to connect.
+/// Optional field - paired with SS13LIB_CLIENT_VERSION
+#define SS13LIB_CLIENT_BUILD // world.byond_build
+
 //! All fields prefixed with _ROUND_ are optional, many of these are not applicable to some kinds of SS13 servers
 
 /// What map is currently being played on
@@ -81,5 +89,15 @@
 /// if this resolves to a truthy value, they will be disconnected if they cannot
 /// authenticate themselves via SS13Hub
 #define SS13LIB_GUESTS_BANNED // CONFIG_GET(flag/guestban)
+
+/// If the codebase would like to handle initializing SS13Lib themselves
+/// instead of it being started automatically
+#define SS13LIB_EXTERNAL_INIT
+
+/// If the codebase would like to handle the regular heartbeat to the hub
+/// isntead of it being looped internally. This must fire at least every minute
+/// as servers are only considered active if they have had a successful heartbeat
+/// within the last two minutes. It is recommended to fire every 30 seconds.
+#define SS13LIB_EXTERNAL_HEARTBEAT
 
 #endif
