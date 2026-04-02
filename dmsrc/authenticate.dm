@@ -55,8 +55,9 @@
 	var/stored_launcher_details = connection_to_launcher["[new_client.address]+[new_client.computer_id]"]
 	if(stored_launcher_details)
 		SS13LIB_INFO_LOG("Reconnection detected for [new_client.address], serving launcher browser.")
-		var/mob/ss13lib_holder_mob/mob = new(null, stored_launcher_details)
-		return mob
+
+		new_client.mob = new /mob/ss13lib_holder_mob(null, stored_launcher_details)
+		return new_client.mob
 
 	var/key_to_skip = new_client.key
 	isbanned_hook_ignore |= key_to_skip
@@ -123,8 +124,12 @@
 /mob/ss13lib_holder_mob/New(loc, stored_launcher_details)
 	src.stored_launcher_details = stored_launcher_details
 
+/// We create a browser that will communicate with the launcher to grab our auth ticket
+/// and then rejoin the game with .url to avoid re-entering /client/New() with a client
 /mob/ss13lib_holder_mob/Login()
-	var/static/basehtml = {"
+	SS13LIB_INFO_LOG("[ckey] logging into holder mob.")
+
+	var/static/basehtml = @{"
 <!DOCTYPE html>
 <html>
 
@@ -132,7 +137,6 @@
 	<script>
 		const port = %LAUNCHER_PORT%;
 		const key = %LAUNCHER_KEY%;
-		const mob_reference = %MOB_REFERENCE%;
 
 		window.contact = (endpoint, params) => {
 			const url = params ? `http://localhost:${port}/${endpoint}?${params}` : `http://localhost:${port}/${endpoint}`;
@@ -141,9 +145,10 @@
 			}).then((response) => {
 				const contentType = response.headers.get('content-type');
 				if (contentType && contentType.includes('application/json')) {
-					return response.json().then((object) => {
-						location.href = `byond://?src=${mob_reference}&command=${endpoint}&body=${encodeURIComponent(JSON.stringify(object))}`
-						return object;
+					return response.json().then((returned) => {
+						BYOND.winget(null, "url").then((url) => {
+							BYOND.command(`.url ${url.url}?auth_ticket=${returned["auth_ticket"]}`)
+						})
 					});
 				}
 			});
@@ -162,43 +167,6 @@
 
 	var/html = replacetext(basehtml, "%LAUNCHER_PORT%", json_encode(stored_launcher_details["port"]))
 	html = replacetext(html, "%LAUNCHER_KEY%", json_encode(stored_launcher_details["key"]))
-	html = replacetext(html, "%MOB_REFERENCE%", json_encode("\ref[src]"))
 
 	src << browse(html, "window=launcher-browser,size=1x1,titlebar=0,can_resize=0")
 	winset(client, "launcher-browser", "is-visible=false")
-
-/mob/ss13lib_holder_mob/Topic(href, href_list)
-	if(usr != src)
-		return
-
-	var/command = href_list["command"]
-	var/body = href_list["body"]
-
-	if(command != "auth-ticket" || !body)
-		return
-
-	var/returned
-
-	try
-		returned = json_decode(body)
-	catch
-		SS13LIB_WARNING_LOG("Failed to decode JSON in Topic response from user.")
-
-	if(!returned)
-		return
-
-	var/auth_ticket = returned["auth_ticket"]
-	if(!auth_ticket)
-		SS13LIB_WARNING_LOG("Invalid response in Topic response from user.")
-		return
-
-	var/client/authenticating_client = client
-	authenticating_client.mob = null
-
-	// We have to re-enter here to properly go through the consumers client Initialization flow
-	// which should have been fully interrupted by early returning the mob we are currently in
-	// assuming this has been integrated properly and we are at the **top** of /client/New
-	authenticating_client.New(list2params(
-		list("auth_ticket" = auth_ticket)
-	))
-	return
