@@ -35,7 +35,7 @@
 				return TRUE
 
 #ifdef SS13LIB_CLIENT_INFO
-			SS13LIB_CLIENT_INFO(X) = response
+			SS13LIB_CLIENT_INFO(new_client) = response
 #endif
 
 			new_client.key = resolved_key
