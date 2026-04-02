@@ -20,41 +20,56 @@
 		var/datum/ss13lib_auth_response/response = check_auth_ticket(auth_ticket)
 
 		if(response)
-			var/is_banned = world.IsBanned(response.ckey_to_use, new_client.address, new_client.computer_id)
+			var/resolved_key = response.key ? response.key : "[response.username][SS13LIB_CKEY_SUFFIX]"
+
+			var/is_banned = world.IsBanned(resolved_key, new_client.address, new_client.computer_id)
 			if(is_banned)
 				// TODO: provide more feedback to gamecode-banned users
 				del(new_client)
 				// No further work to occur in /client/New(), this user is gone.
 				return TRUE
 
-			new_client.ckey = response.ckey_to_use
-			// The ckey has now been set appropriately, so /client/New() can continue uninterrupted.
+#ifdef SS13LIB_CLIENT_INFO
+			SS13LIB_CLIENT_INFO(X) = response
+#endif
+
+			new_client.key = resolved_key
+			// The key has now been set appropriately, so /client/New() can continue uninterrupted.
 			return FALSE
 
 		SS13LIB_WARNING_LOG("Failed to authenticate user via SS13Hub.")
 
-		// TODO: provide more feedback to Guest-banned users
-		if(SS13LIB_GUESTS_BANNED)
+		var/key_to_skip = new_client.key
+		isbanned_hook_ignore += key_to_skip
+
+		if(world.IsBanned(new_client.key, new_client.address, new_client.computer_id))
+			isbanned_hook_ignore -= key_to_skip
 			del(new_client)
 			// No further work to occur in /client/New(), this user is gone.
 			return TRUE
+		isbanned_hook_ignore -= key_to_skip
+
 
 	var/stored_launcher_details = connection_to_launcher["[new_client.address]+[new_client.computer_id]"]
 	if(stored_launcher_details)
 		var/mob/ss13lib_holder_mob/mob = new(null, stored_launcher_details)
 		return mob
 
-	// TODO: provide more feedback to Guest-banned users
-	if(SS13LIB_GUESTS_BANNED)
+	var/key_to_skip = new_client.key
+	isbanned_hook_ignore += key_to_skip
+
+	if(world.IsBanned(new_client.key, new_client.address, new_client.computer_id))
+		isbanned_hook_ignore -= key_to_skip
 		del(new_client)
 		return TRUE
+	isbanned_hook_ignore -= key_to_skip
 
 	// No handling required for this user, already authenticated via BYOND
 	return FALSE
 
-/datum/ss13lib_auth_response
-	var/ckey_to_use
-	var/username
+/// When we send a Guest that we've already screened (and they have failed to authenticate)
+/// we just send them back into world.IsBanned() to determine if they should exit or not
+/datum/ss13lib/var/isbanned_hook_ignore = list()
 
 /datum/ss13lib/proc/check_auth_ticket(auth_ticket) as /datum/ss13lib_auth_response
 	if(!src.server_id)
@@ -86,13 +101,15 @@
 		SS13LIB_ERROR_LOG("Failed to parse JSON response from server.")
 		return FALSE
 
-	if(!decoded["ckey_to_use"] || !decoded["username"])
+	if(!decoded["username"])
 		SS13LIB_ERROR_LOG("Server responded with an invalid result.")
 		return FALSE
 
 	var/datum/ss13lib_auth_response/auth = new
-	auth.ckey_to_use = decoded["ckey_to_use"]
+	auth.ckey = decoded["ckey"]
+	auth.key = decoded["key"]
 	auth.username = decoded["username"]
+	auth.hwid = decoded["hwid"]
 
 	return auth
 
