@@ -82,7 +82,6 @@ sequenceDiagram
 ```
 
 ## TODOs
-- Shore up schema for:
-	- handshake
-	- authentication
-	- topic
+- Create restart flow (requires /world/Reboot() hook, post parent call in client/Login() hook)
+- Always connect control server, store connection details here instead of in the library
+- Better versioning(?)
