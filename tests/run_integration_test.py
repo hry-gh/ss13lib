@@ -309,7 +309,7 @@ def test_client_auth(server_id):
     log("Logged in, got session token")
 
     join = hub_api("POST", "/api/session/join", {
-        "server_id": server_id,
+        "server_id": str(server_id),
     }, token=token)
     if not join:
         fail("Failed to get auth ticket from /api/session/join")
