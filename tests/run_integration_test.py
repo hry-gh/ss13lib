@@ -7,6 +7,9 @@ import subprocess
 import sys
 import time
 import urllib.request
+from datetime import datetime, timedelta, timezone
+
+from pymongo import MongoClient
 
 GAME_PORT = 4587
 HUB_PORT = 3000
@@ -15,9 +18,13 @@ TOPIC_POLL_INTERVAL = 5
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 HUB_DIR = os.environ.get("SS13HUB_DIR", os.path.join(PROJECT_DIR, "ss13hub"))
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgres://ss13hub:testpassword@localhost:5432/ss13hub")
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+MONGO_DB = os.environ.get("MONGO_DB", "ss13hub_test")
 DREAMSEEKER_EXE = os.environ.get("DREAMSEEKER_EXE")
 CI = os.environ.get("CI") == "true"
+
+_mongo_client = MongoClient(MONGO_URL, uuidRepresentation="standard")
+db = _mongo_client[MONGO_DB]
 
 processes: list[subprocess.Popen] = []
 failed = False
@@ -58,12 +65,8 @@ def cleanup():
             proc.kill()
 
 
-def psql(query: str) -> str:
-    result = subprocess.run(
-        ["psql", DATABASE_URL, "-t", "-A", "-c", query],
-        capture_output=True, text=True, timeout=10,
-    )
-    return result.stdout.strip()
+def drop_test_db():
+    _mongo_client.drop_database(MONGO_DB)
 
 
 def wait_for(description: str, check, timeout: int = 30, interval: float = 1.0):
@@ -118,7 +121,8 @@ host = "127.0.0.1"
 port = {HUB_PORT}
 
 [database]
-url = "{DATABASE_URL}"
+url = "{MONGO_URL}"
+name = "{MONGO_DB}"
 
 [auth]
 require_email_confirmation = false
@@ -206,23 +210,22 @@ def test_handshake(dd: subprocess.Popen) -> str | None:
             log("Game log:")
             log(read_log(os.path.join(SCRIPT_DIR, "testgame.log")))
             return None
-        row = psql(f"SELECT id, address, port, active FROM servers WHERE port = {GAME_PORT} LIMIT 1;")
-        return row if row else None
+        return db.servers.find_one({"port": GAME_PORT})
 
-    row = wait_for("server to register via handshake", server_registered, timeout=30)
-    if not row:
+    doc = wait_for("server to register via handshake", server_registered, timeout=30)
+    if not doc:
         log("Hub logs:")
         log(read_log(os.path.join(SCRIPT_DIR, ".hub.log")))
         end_section()
         return None
 
-    server_id, address, port, active = row.split("|")
+    server_id = doc["_id"]
     log(f"server_id: {server_id}")
-    log(f"address:   {address}")
-    log(f"port:      {port}")
-    log(f"active:    {active}")
+    log(f"address:   {doc['address']}")
+    log(f"port:      {doc['port']}")
+    log(f"active:    {doc.get('active')}")
 
-    if active != "t":
+    if not doc.get("active"):
         fail("Server not marked active")
         end_section()
         return None
@@ -232,14 +235,12 @@ def test_handshake(dd: subprocess.Popen) -> str | None:
     return server_id
 
 
-def test_heartbeat(server_id: str):
+def test_heartbeat(server_id):
     section("Test: Heartbeat")
 
-    recent = psql(
-        f"SELECT COUNT(*) FROM servers WHERE id = '{server_id}' "
-        f"AND last_heartbeat > NOW() - INTERVAL '30 seconds';"
-    )
-    if recent != "1":
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=30)
+    doc = db.servers.find_one({"_id": server_id, "last_heartbeat": {"$gt": cutoff}})
+    if not doc:
         fail("Heartbeat timestamp not recent")
         end_section()
         return
@@ -248,33 +249,27 @@ def test_heartbeat(server_id: str):
     end_section()
 
 
-def test_topic_poll(server_id: str):
+def test_topic_poll(server_id):
     section("Test: Topic poll")
 
     def status_populated():
-        row = psql(
-            f"SELECT status, last_status_update FROM servers "
-            f"WHERE id = '{server_id}' AND status IS NOT NULL;"
-        )
-        return row if row else None
+        return db.servers.find_one({"_id": server_id, "status": {"$ne": None}})
 
-    row = wait_for(
+    doc = wait_for(
         "hub to poll game via BYOND Topic",
         status_populated,
         timeout=TOPIC_POLL_INTERVAL + 15,
     )
 
-    if not row:
+    if not doc:
         log("Hub logs:")
         log(read_log(os.path.join(SCRIPT_DIR, ".hub.log")))
         end_section()
         return
 
-    status_json, last_update = row.split("|")
-    log(f"last_status_update: {last_update}")
-
-    status = json.loads(status_json)
-    log(f"status: {json.dumps(status, indent=2)}")
+    log(f"last_status_update: {doc.get('last_status_update')}")
+    status = doc["status"]
+    log(f"status: {json.dumps(status, indent=2, default=str)}")
 
     required_fields = ["display_name", "pop", "language"]
     missing = [f for f in required_fields if f not in status]
@@ -284,7 +279,7 @@ def test_topic_poll(server_id: str):
         passed(f"Topic response contains required fields ({', '.join(required_fields)})")
     end_section()
 
-def test_client_auth(server_id: str):
+def test_client_auth(server_id):
     if not DREAMSEEKER_EXE:
         log("DREAMSEEKER_EXE not set, skipping auth test")
         return
@@ -334,11 +329,8 @@ def test_client_auth(server_id: str):
     log(f"DreamSeeker launched (PID {ds_proc.pid})")
 
     def ticket_consumed():
-        row = psql(
-            "SELECT consumed FROM auth_tickets "
-            f"WHERE ticket = '{auth_ticket}';"
-        )
-        return row == "t"
+        doc = db.auth_tickets.find_one({"ticket": auth_ticket})
+        return bool(doc and doc.get("consumed"))
 
     if wait_for("auth ticket to be consumed", ticket_consumed, timeout=30):
         passed("Auth ticket was consumed — client authenticated successfully")
@@ -354,6 +346,7 @@ def test_client_auth(server_id: str):
 
 def main():
     try:
+        drop_test_db()
         start_hub()
         compile_game()
         dd = start_dreamdaemon()

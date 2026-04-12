@@ -13,6 +13,9 @@
 /// Consumers must call this at the start of /client/IsBanned()
 #define SS13LIB_ISBANNED var/ss13lib_ban_return = (SS13LIB).handle_banned(args[1], args[2], args[3]); if(!isnull(ss13lib_ban_return)) return ss13lib_ban_return
 
+/// Consumers must call this as early as possible in /world/Reboot
+#define SS13LIB_REBOOT (SS13LIB).handle_reboot()
+
 //! CONFIGURATION
 
 // It is recommended to copy these defines and configure them externally
@@ -54,10 +57,18 @@
 /// Optional field
 #define SS13LIB_PLAYER_LIMIT // CONFIG_GET(number/popcap)
 
-/// If this server belongs to a known network of servers, this can be provided here.
-/// This only provides a small logo next to the listing on the launcher page
+/// The name of the community or network of servers this server belongs to.
 /// Optional field
-#define SS13LIB_NETWORK_IDENTIFIER // CONFIG_GET(string/network_identifier)
+#define SS13LIB_COMMUNITY_NAME // CONFIG_GET(string/community_name)
+
+/// The geographic region where this server is hosted.
+/// Values: "africa_central", "africa_north", "africa_south", "antarctica",
+///   "asia_east", "asia_north", "asia_southeast", "central_america",
+///   "europe_east", "europe_west", "greenland", "india", "middle_east", "moon",
+///   "north_america_central", "north_america_east", "north_america_west",
+///   "oceania", "south_america_east", "south_america_south", "south_america_west"
+/// Optional field
+#define SS13LIB_REGION // "north_america_east"
 
 /// What tags this server should have on the SS13Hub. This is from a predefined list of available tags,
 /// available at: <source code link to backend parsing for tags>
@@ -100,6 +111,10 @@
 /// What the ID of the current round is
 #define SS13LIB_ROUND_ID // GLOB.round_id
 
+/// The current state of the round
+/// Values: "initializing", "lobby", "playing", "finished"
+#define SS13LIB_ROUND_STATE // "playing"
+
 //! LIBRARY CONFIGURATION
 
 #define SS13LIB_INFO_LOG(X) // log_debug(X)
@@ -111,14 +126,14 @@
 #define SS13LIB_EXTERNAL_INIT
 
 /// If the codebase would like to handle the regular heartbeat to the hub
-/// isntead of it being looped internally. This must fire at least every minute
+/// instead of it being looped internally. This must fire at least every minute
 /// as servers are only considered active if they have had a successful heartbeat
 /// within the last two minutes. It is recommended to fire every 30 seconds.
 #define SS13LIB_EXTERNAL_HEARTBEAT
 
 /// If this is defined, after authenticating, SS13Lib will save this field to the client
 /// which can be used for identification of the upstream username, hwid or account age.
-/// This shoulds be typed as /datum/ss13lib_auth_response
+/// This should be typed as /datum/ss13lib_auth_response
 #define SS13LIB_CLIENT_INFO(X) // X.hub_info
 
 #endif

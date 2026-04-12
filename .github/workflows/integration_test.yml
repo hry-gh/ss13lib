@@ -12,19 +12,15 @@ jobs:
     timeout-minutes: 30
 
     services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: ss13hub
-          POSTGRES_PASSWORD: testpassword
-          POSTGRES_DB: ss13hub
+      mongo:
+        image: mongo:7
         ports:
-          - 5432:5432
+          - 27017:27017
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' | grep -q 1"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -93,11 +89,15 @@ jobs:
         working-directory: ss13hub
         run: cargo build
 
+      - name: Install Python test dependencies
+        run: pip install pymongo
+
       - name: Run integration tests
         run: |
           source $HOME/BYOND/byond/bin/byondsetup
           python3 tests/run_integration_test.py
         env:
           SS13HUB_DIR: ${{ github.workspace }}/ss13hub
-          DATABASE_URL: postgres://ss13hub:testpassword@localhost:5432/ss13hub
+          MONGO_URL: mongodb://localhost:27017
+          MONGO_DB: ss13hub_test
           DREAMSEEKER_EXE: /home/runner/BYOND-win/byond/bin/dreamseeker.exe
