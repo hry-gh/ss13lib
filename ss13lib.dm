@@ -136,6 +136,28 @@
 /// This should be typed as /datum/ss13lib_auth_response
 #define SS13LIB_CLIENT_INFO(X) // X.hub_info
 
+//! DOMAIN ATTESTATION
+//! Optional. Proves domain ownership to the hub via DNS TXT record + ed25519 signature.
+
+/// The domain to attest ownership of. Must have a _ss13hub TXT record with the matching ed25519 pubkey.
+/// Optional field — if not defined, attestation is skipped.
+#define SS13LIB_ATTEST_DOMAIN // CONFIG_GET(string/verified_domain)
+
+/// Ed25519 signing implementation. Takes a base64 private key and a message string,
+/// returns a base64-encoded signature. The consumer must provide this — typically via rustg.
+/// Required if SS13LIB_ATTEST_DOMAIN is defined.
+#define SS13LIB_ED25519_SIGN(privkey, message) // rustg_ed25519_sign(privkey, message)
+
+/// Base64-encoded ed25519 private key (32-byte seed). The corresponding public key
+/// must appear in the _ss13hub DNS TXT record as: ss13hub-ed25519=<base64-pubkey>
+/// Required if SS13LIB_ATTEST_DOMAIN is defined.
+#define SS13LIB_ATTEST_PRIVKEY // CONFIG_GET(string/verified_private_key) = "base64-encoded-32-byte-seed"
+
+/// Returns the current Unix timestamp (seconds since 1970-01-01). The consumer must
+/// provide this — typically via rustg
+/// Required if SS13LIB_ATTEST_DOMAIN is defined.
+#define SS13LIB_UNIX_EPOCH // rustg_unix_timestamp()
+
 #endif
 
 /datum/ss13lib_auth_response
