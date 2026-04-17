@@ -64,7 +64,7 @@
 /// The geographic region where this server is hosted.
 /// Values: "africa_central", "africa_north", "africa_south", "antarctica",
 ///   "asia_east", "asia_north", "asia_southeast", "central_america",
-///   "europe_east", "europe_west", "greenland", "india", "middle_east", "moon",
+///   "europe_east", "europe_west", "greenland", "india", "middle_east",
 ///   "north_america_central", "north_america_east", "north_america_west",
 ///   "oceania", "south_america_east", "south_america_south", "south_america_west"
 /// Optional field
