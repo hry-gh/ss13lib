@@ -140,6 +140,7 @@
 //! Optional. Proves domain ownership to the hub via DNS TXT record + ed25519 signature.
 
 /// The domain to attest ownership of. Must have a _ss13hub TXT record with the matching ed25519 pubkey.
+/// Maximum 32 characters.
 /// Optional field — if not defined, attestation is skipped.
 #define SS13LIB_ATTEST_DOMAIN // CONFIG_GET(string/verified_domain)
 
