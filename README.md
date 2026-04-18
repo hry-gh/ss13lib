@@ -47,6 +47,46 @@ var/global/client_count = 0
 	SS13LIB_ISBANNED
 ```
 
+### Domain Attestation (Optional)
+
+Domain attestation lets you prove ownership of a domain, showing a verified badge on the hub. This requires:
+
+1. An ed25519 keypair
+2. A DNS TXT record on your domain
+3. A rustg (or equivalent) ed25519 signing function and unix timestamp function
+
+#### Generate keypair
+
+```bash
+# Generate an ed25519 private key
+openssl genpkey -algorithm ed25519 -out privkey.pem
+
+# Extract the raw 32-byte seed, base64-encoded — this is your SS13LIB_ATTEST_PRIVKEY
+openssl pkey -in privkey.pem -outform DER | tail -c 32 | base64
+
+# Extract the raw 32-byte public key, base64-encoded — this goes in your DNS record
+openssl pkey -in privkey.pem -pubout -outform DER | tail -c 32 | base64
+```
+
+#### Set DNS record
+
+Add a TXT record at `_ss13hub.<your domain>` with the public key from above:
+
+```
+_ss13hub.play.example.com.  TXT  "ss13hub-ed25519=<base64 public key>"
+```
+
+#### Configure SS13Lib
+
+```dm
+#define SS13LIB_ATTEST_DOMAIN "play.example.com" // max 32 characters
+#define SS13LIB_ATTEST_PRIVKEY "<base64 private seed from above>" // this is a secret, put this in your config!
+#define SS13LIB_ED25519_SIGN(privkey, message) rustg_ed25519_sign(privkey, message)
+#define SS13LIB_UNIX_EPOCH rustg_unix_timestamp()
+```
+
+On each server start, SS13Lib will sign a challenge from the hub and submit it. If verification succeeds, your server appears with a verified domain in the listing.
+
 ## Flows
 
 ```mermaid
