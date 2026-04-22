@@ -57,10 +57,6 @@
 /// Optional field
 #define SS13LIB_PLAYER_LIMIT // CONFIG_GET(number/popcap)
 
-/// The name of the community or network of servers this server belongs to.
-/// Optional field
-#define SS13LIB_COMMUNITY_NAME // CONFIG_GET(string/community_name)
-
 /// The geographic region where this server is hosted.
 /// Values: "africa_central", "africa_north", "africa_south", "antarctica",
 ///   "asia_east", "asia_north", "asia_southeast", "central_america",
