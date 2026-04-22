@@ -23,8 +23,6 @@ A drop in library for [Space Station 13](https://spacestation13.com) servers to 
 #define SS13LIB_WARNING_LOG(X) world.log << X
 #define SS13LIB_ERROR_LOG(X) world.log << X
 
-#define SS13LIB_GUESTS_BANNED FALSE
-
 //! Anywhere else...
 var/global/client_count = 0
 

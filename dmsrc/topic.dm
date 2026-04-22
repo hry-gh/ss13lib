@@ -8,6 +8,14 @@
 	if(!query)
 		return FALSE
 
+#ifdef SS13LIB_HUB_VISIBILITY
+	if(!SS13LIB_HUB_VISIBILITY)
+		return json_encode(list("status" = "unlisted"))
+#else
+	if(!world.visibility)
+		return json_encode(list("status" = "unlisted"))
+#endif
+
 	SS13LIB_INFO_LOG("Received topic query, preparing response.")
 
 	var/response = list(
