@@ -8,6 +8,9 @@
 	if(!query)
 		return FALSE
 
+	if(!src.ready)
+		return json_encode(list("status" = "starting"))
+
 #ifdef SS13LIB_HUB_VISIBILITY
 	if(!SS13LIB_HUB_VISIBILITY)
 		return json_encode(list("status" = "unlisted"))
