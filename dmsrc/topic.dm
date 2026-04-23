@@ -4,8 +4,12 @@
 /datum/ss13lib/proc/handle_topic(topic_parameters)
 	var/parameters = params2list(topic_parameters)
 
-	var/query = parameters[SS13LIB_QUERY_CODE]
-	if(!query)
+	if(parameters[SS13LIB_PREFLIGHT_CODE])
+		if(!src.server_id)
+			return FALSE
+		return json_encode(list("server_id" = src.server_id))
+
+	if(!parameters[SS13LIB_QUERY_CODE])
 		return FALSE
 
 	if(!src.ready)
@@ -22,6 +26,8 @@
 	SS13LIB_INFO_LOG("Received topic query, preparing response.")
 
 	var/response = list(
+		"poll_key" = src.poll_key,
+
 #ifndef SS13LIB_PLAYER_COUNT
 #error SS13LIB_PLAYER_COUNT must be defined if using external SS13Lib configuration!
 #endif

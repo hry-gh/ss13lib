@@ -230,7 +230,12 @@ def test_handshake(dd: subprocess.Popen) -> str | None:
         end_section()
         return None
 
-    passed("Server registered and active after handshake")
+    if not doc.get("poll_key"):
+        fail("Server missing poll_key after handshake")
+        end_section()
+        return None
+
+    passed("Server registered and active after handshake (poll_key present)")
     end_section()
     return server_id
 
