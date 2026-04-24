@@ -27,6 +27,19 @@
 // #error SS13Lib unconfigured, either uncomment this error if you are including configuration directly in ss13lib.dm
 // #error or #define SS13LIB_EXTERNAL_CONFIGURATION where you have configured SS13Lib
 
+/// Define this to opt out of all SS13Hub features. The server will always be
+/// invisible on the hub and will only use BYOND pager authentication.
+/// This overrides SS13LIB_HUB_VISIBILITY and SS13LIB_AUTH_METHODS.
+// #define SS13LIB_BYOND_ONLY
+
+#ifdef SS13LIB_BYOND_ONLY
+#define SS13LIB_HUB_VISIBILITY FALSE
+#define SS13LIB_AUTH_METHODS list("byond")
+#define SS13LIB_PLAYER_COUNT 0
+#define SS13LIB_SERVER_DISPLAY_NAME ""
+#define SS13LIB_SERVER_LANGUAGE "en"
+#endif
+
 //! HUB CONFIGURATION
 
 /// The total number of players currently connected to this server
@@ -76,6 +89,12 @@
 /// queries are silently ignored. If not defined, falls back to world.visibility.
 /// Optional field
 #define SS13LIB_HUB_VISIBILITY // world.visibility
+
+/// The authentication methods this server supports. Sent during handshake.
+/// Valid values: "hub" (SS13Hub authentication), "byond" (BYOND pager authentication)
+/// Defaults to list("hub", "byond") if not defined.
+/// Optional field
+#define SS13LIB_AUTH_METHODS // list("hub", "byond")
 
 /// If users are to connect to a different IP than the one the hub is communicating to
 /// Optional field
@@ -132,6 +151,11 @@
 /// as servers are only considered active if they have had a successful heartbeat
 /// within the last two minutes. It is recommended to fire every 30 seconds.
 #define SS13LIB_EXTERNAL_HEARTBEAT
+
+/// If this is defined, SS13Lib will call this to notify in-game administrators
+/// of important messages, such as content policy violations.
+/// The argument is a string message.
+#define SS13LIB_MESSAGE_ADMINS(X) // message_admins(X)
 
 /// If this is defined, after authenticating, SS13Lib will save this field to the client
 /// which can be used for identification of the upstream username, hwid or account age.

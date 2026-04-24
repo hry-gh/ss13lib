@@ -45,6 +45,23 @@ var/global/client_count = 0
 	SS13LIB_ISBANNED
 ```
 
+### BYOND-Only Mode (Optional)
+
+If you want to opt out of appearing on the SS13Hub listing entirely, using only BYOND pager authentication:
+
+```dm
+//! In some file before ss13lib.dm, ie, ss13lib.config.dm:
+#define SS13LIB_EXTERNAL_CONFIGURATION
+#define SS13LIB_BYOND_ONLY
+
+//! Anywhere else...
+/world/Topic(T)
+	SS13LIB_TOPIC
+```
+
+`SS13LIB_BYOND_ONLY` sets all required hub configuration defines automatically. The `/world/Topic` hook is still needed so the hub can determine the server does not want to be listed.
+
+
 ### Domain Attestation (Optional)
 
 Domain attestation lets you prove ownership of a domain, showing a verified badge on the hub. This requires:
