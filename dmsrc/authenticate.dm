@@ -104,11 +104,12 @@
 	SS13LIB_INFO_LOG("Auth ticket validated, username: [decoded["username"]]")
 
 	var/datum/ss13lib_auth_response/auth = new
-	auth.ckey = decoded["ckey"]
 	auth.key = decoded["key"]
 	auth.username = decoded["username"]
 	auth.created_at = decoded["created_at"]
 	auth.hwid = decoded["hwid"]
+	auth.discord_id = decoded["discord_id"]
+	auth.steam_id = decoded["steam_id"]
 
 	return auth
 

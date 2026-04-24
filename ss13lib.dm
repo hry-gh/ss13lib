@@ -164,9 +164,7 @@
 #endif
 
 /datum/ss13lib_auth_response
-	/// The BYOND ckey if the user has a linked BYOND account, null otherwise.
-	var/ckey
-	/// The BYOND display key if the user has a linked BYOND account, null otherwise.
+	/// The BYOND key if the user has a linked BYOND account, null otherwise.
 	var/key
 	/// The SS13Hub username, always present.
 	var/username
@@ -174,3 +172,7 @@
 	var/created_at
 	/// Anonymized hardware ID for this client, null if not provided.
 	var/hwid
+	/// The user's Discord ID if they have a linked Discord account, null otherwise.
+	var/discord_id
+	/// The user's Steam ID if they have a linked Steam account, null otherwise.
+	var/steam_id
