@@ -7,7 +7,7 @@
 #define SS13LIB_SERVER_LANGUAGE "en"
 
 #define SS13LIB_ROUND_MAP_NAME "TestMap"
-#define SS13LIB_ROUND_DURATION 0
+#define SS13LIB_ROUND_STARTED_AT_BYOND world.realtime
 #define SS13LIB_ROUND_ID "1"
 #define SS13LIB_ROUND_SECURITY_LEVEL "green"
 #define SS13LIB_ROUND_GAMEMODE "extended"

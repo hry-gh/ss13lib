@@ -120,8 +120,14 @@
 /// What map is currently being played on
 #define SS13LIB_ROUND_MAP_NAME // SSmapping.current_map.map_name
 
-/// How long the current round has been going on for, in deciseconds
-#define SS13LIB_ROUND_DURATION // STATION_TIME_PASSED
+/// Unix timestamp (seconds) of when the current round started.
+/// Use this if your codebase has access to a unix timestamp (e.g. via rustg).
+/// Preferred over SS13LIB_ROUND_STARTED_AT_BYOND when available.
+#define SS13LIB_ROUND_STARTED_AT_UNIX // rustg_unix_timestamp() at round start
+
+/// BYOND world.realtime value captured at round start (deciseconds since 2000-01-01 00:00:00 UTC).
+/// Use this if your codebase does not have access to a unix timestamp.
+#define SS13LIB_ROUND_STARTED_AT_BYOND // world.realtime at round start
 
 /// What the current security level of the round is
 #define SS13LIB_ROUND_SECURITY_LEVEL // SSsecurity_level.current_security_level.name
