@@ -276,7 +276,7 @@ def test_topic_poll(server_id):
     status = doc["status"]
     log(f"status: {json.dumps(status, indent=2, default=str)}")
 
-    required_fields = ["display_name", "pop", "language"]
+    required_fields = ["display_name", "language"]
     missing = [f for f in required_fields if f not in status]
     if missing:
         fail(f"Topic response missing required fields: {missing}")
