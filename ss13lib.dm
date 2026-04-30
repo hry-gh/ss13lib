@@ -96,6 +96,12 @@
 /// Optional field
 #define SS13LIB_AUTH_METHODS // list("hub", "byond")
 
+/// The engine this server runs on. Sent during handshake.
+/// Valid values: "byond", "opendream"
+/// Defaults to "byond" if not defined.
+/// Optional field
+#define SS13LIB_ENGINE // "byond"
+
 /// If users are to connect to a different IP than the one the hub is communicating to
 /// Optional field
 #define SS13LIB_CONNECTION_ADDRESS // direct.myserver.com:1337
